@@ -1,0 +1,2 @@
+# Openharmony_codecheck
+Openharmony_codecheck
