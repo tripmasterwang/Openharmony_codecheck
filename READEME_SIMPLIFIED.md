@@ -3,8 +3,8 @@
 ## 安装
 
 ```bash
-git clone <你的GitHub仓库URL>
-cd mini-swe-agent
+git clone https://github.com/tripmasterwang/Openharmony_codecheck.git
+cd Openharmony_codecheck
 pip install -e .
 ```
 
