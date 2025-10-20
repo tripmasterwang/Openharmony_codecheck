@@ -182,3 +182,25 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
+
+# ============================================
+# OpenHarmony 相关
+# ============================================
+
+# 本地配置文件（包含 API Keys，不应提交）
+config/local/.env
+
+# 测试结果目录
+dataset1/openharmony/test_result/
+
+# 批处理结果
+openharmony_*_results_*/
+batch_test_*/
+
+# 打包文件
+*.zip
+*.tar.gz
+
+# 轨迹文件
+*.traj.json
+

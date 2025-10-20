@@ -94,7 +94,7 @@ class DefaultAgent:
         if 0 < self.config.step_limit <= self.model.n_calls or 0 < self.config.cost_limit <= self.model.cost:
             raise LimitsExceeded()
         response = self.model.query(self.messages)
-        self.add_message("assistant", **response)
+        self.add_message("assistant", content=response["content"])
         return response
 
     def get_observation(self, response: dict) -> dict:

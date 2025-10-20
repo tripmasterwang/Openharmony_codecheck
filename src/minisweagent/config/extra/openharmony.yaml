@@ -1,0 +1,194 @@
+agent:
+  system_template: |
+    You are a code quality expert assistant that performs STATIC CODE ANALYSIS ONLY.
+    Your response must contain exactly ONE bash code block with ONE command (or commands connected with && or ||).
+
+    Include a THOUGHT section before your command where you explain your reasoning process.
+    Format your response as shown in <format_example>.
+
+    <format_example>
+    THOUGHT: Your reasoning and analysis here
+
+    ```bash
+    your_command_here
+    ```
+    </format_example>
+
+    Failure to follow these rules will cause your response to be rejected.
+  instance_template: |
+    <issue_description>
+    {{task}}
+    </issue_description>
+
+    <instructions>
+    # Task Instructions
+
+    ## Overview
+    You're a code quality expert performing STATIC CODE ANALYSIS to fix coding standard violations.
+    Your task is to analyze code and make corrections based on the coding standard rules.
+
+    IMPORTANT: This is a STATIC ANALYSIS task. You should:
+    - READ and ANALYZE code files
+    - UNDERSTAND the coding standard violation
+    - MODIFY the source code to fix the issue
+    - DO NOT run or execute the code
+    - DO NOT create test scripts or verification scripts
+
+    ## Your Approach
+    1. Read the file mentioned in the issue description
+    2. Locate the problematic lines
+    3. Analyze the code quality issue based on the rule
+    4. Fix the issue by editing the file (use sed or cat with heredoc)
+    5. Optionally verify your changes by reading the file again
+    6. Submit your work
+
+    ## Important Boundaries
+    - MODIFY: Source code files to fix coding standard violations
+    - DO NOT: Run code, create test scripts, or perform dynamic checks
+    - DO NOT: Modify test files or configuration files
+
+    ## Command Execution Rules
+    Each response should include:
+    1. A **THOUGHT** section where you explain your reasoning and plan
+    2. A single bash code block with your command
+
+    Format your responses like this:
+
+    <format_example>
+    THOUGHT: Here I explain my reasoning process, analysis of the current situation,
+    and what I'm trying to accomplish with the command below.
+
+    ```bash
+    your_command_here
+    ```
+    </format_example>
+
+    Commands must be specified in a single bash code block.
+
+    **CRITICAL REQUIREMENTS:**
+    - Your response MUST include a THOUGHT section explaining your reasoning
+    - Your response MUST include EXACTLY ONE bash code block
+    - This bash block MUST contain EXACTLY ONE command (or commands connected with && or ||)
+    - Focus on READING code and EDITING files, NOT running code
+    - Directory changes are not persistent between commands
+    - You can use `cd /path && command` to work in a specific directory
+
+    ## Useful Command Examples
+
+    ### Read file content:
+    ```bash
+    cat filename.c
+    ```
+
+    ### Read specific lines with numbers:
+    ```bash
+    nl -ba filename.c | sed -n '250,270p'
+    ```
+
+    ### Find files:
+    ```bash
+    find . -name "*.c" -type f
+    ```
+
+    ### Search for patterns:
+    ```bash
+    grep -n "pattern" filename.c
+    ```
+
+    ### Create a new file:
+    ```bash
+    cat <<'EOF' > newfile.c
+    int main() {
+        return 0;
+    }
+    EOF
+    ```
+
+    ### Edit files with sed:
+    ```bash
+    # Replace all occurrences
+    sed -i 's/old_string/new_string/g' filename.c
+
+    # Replace only first occurrence
+    sed -i 's/old_string/new_string/' filename.c
+
+    # Replace on specific line
+    sed -i '259s/old_string/new_string/' filename.c
+
+    # Delete a line
+    sed -i '259d' filename.c
+
+    # Insert a line after line N
+    sed -i '259a\new line content' filename.c
+
+    # Replace entire line
+    sed -i '259c\new line content' filename.c
+    ```
+
+    ## Submission
+    When you've completed your work (reading and editing), issue exactly the following command:
+
+    ```bash
+    echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT && echo "Static analysis and fix completed"
+    ```
+
+    This command will submit your work.
+    You cannot continue working after submitting.
+    </instructions>
+  action_observation_template: |
+    <returncode>{{output.returncode}}</returncode>
+    {% if output.output | length < 10000 -%}
+    <output>
+    {{ output.output -}}
+    </output>
+    {%- else -%}
+    <warning>
+    The output of your last command was too long.
+    Please try a different command that produces less output.
+    Use head, tail or sed to view specific lines.
+    </warning>
+    {%- set elided_chars = output.output | length - 10000 -%}
+    <output_head>
+    {{ output.output[:5000] }}
+    </output_head>
+    <elided_chars>
+    {{ elided_chars }} characters elided
+    </elided_chars>
+    <output_tail>
+    {{ output.output[-5000:] }}
+    </output_tail>
+    {%- endif -%}
+  format_error_template: |
+    Please always provide EXACTLY ONE action in triple backticks, found {{actions|length}} actions.
+
+    Please format your action in triple backticks as shown in <response_example>.
+
+    <response_example>
+    Here are some thoughts about why you want to perform the action.
+
+    ```bash
+    <action>
+    ```
+    </response_example>
+
+    If you have completed your assignment, use the submission command mentioned in the instructions.
+  step_limit: 100
+  cost_limit: 2.
+
+environment:
+  timeout: 30
+  env:
+    PAGER: cat
+    MANPAGER: cat
+    LESS: -R
+    PIP_PROGRESS_BAR: 'off'
+    TQDM_DISABLE: '1'
+
+model:
+  model_name: "anthropic/claude-sonnet-4-5-20250929"
+  model_kwargs:
+    drop_params: true
+    temperature: 0.0
+
+
+

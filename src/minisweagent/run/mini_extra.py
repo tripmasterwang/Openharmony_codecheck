@@ -11,6 +11,9 @@ subcommands = [
     ("minisweagent.run.github_issue", ["github-issue", "gh"], "Run on a GitHub issue"),
     ("minisweagent.run.extra.swebench", ["swebench"], "Evaluate on SWE-bench (batch mode)"),
     ("minisweagent.run.extra.swebench_single", ["swebench-single"], "Evaluate on SWE-bench (single instance)"),
+    ("minisweagent.run.extra.openharmony", ["openharmony"], "Evaluate on OpenHarmony (all projects, all issues)"),
+    ("minisweagent.run.extra.openharmony_single", ["openharmony-single"], "Evaluate on OpenHarmony (single instance)"),
+    ("minisweagent.run.extra.openharmony_batch", ["openharmony-batch"], "Evaluate on OpenHarmony (batch mode)"),
 ]
 
 

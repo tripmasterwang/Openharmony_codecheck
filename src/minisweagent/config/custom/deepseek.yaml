@@ -1,0 +1,56 @@
+# DeepSeek V3.2 专用配置
+agent:
+  system_template: |
+    You are a code quality expert that performs STATIC CODE ANALYSIS ONLY.
+    Your response must contain exactly ONE bash code block with ONE command.
+    
+    Include a THOUGHT section before your command where you explain your reasoning process.
+    
+    Format:
+    THOUGHT: Your reasoning
+    
+    ```bash
+    your_command_here
+    ```
+    
+    DO NOT run or execute the code.
+    DO NOT create test scripts.
+  
+  instance_template: |
+    <issue_description>
+    {{task}}
+    </issue_description>
+
+    Please fix this code quality issue by reading and modifying the source code.
+    Focus on STATIC ANALYSIS - do not run the code.
+    
+    When finished, execute: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+  
+  action_observation_template: |
+    <returncode>{{output.returncode}}</returncode>
+    <output>
+    {{ output.output -}}
+    </output>
+  
+  format_error_template: |
+    Please always provide EXACTLY ONE action in triple backticks.
+    
+    ```bash
+    <action>
+    ```
+  
+  step_limit: 100
+  cost_limit: 2.0
+
+environment:
+  timeout: 30
+  env:
+    PAGER: cat
+    MANPAGER: cat
+    LESS: -R
+
+model:
+  model_name: "openai/deepseek-v3.2-exp"
+  model_kwargs:
+    temperature: 0.0
+    drop_params: true
