@@ -31,7 +31,7 @@ export OPENAI_API_KEY=your_api_key_here
 cd dataset1/openharmony/test
 git clone https://gitee.com/openharmony/vendor_telink.git
 cd ../../../
-```bash
+```
 
 然后把为您准备的issue文件放入vendor_telink项目中。注意，此issue文件是openharmony数字协作平台直接导出的
 
