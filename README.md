@@ -11,14 +11,22 @@ pip install -e '.[full]'
 
 ## 环境配置
 
-在使用前，请确保设置了相应的API密钥：
+在使用前，请确保设置了相应的API密钥：可以在.env中输入密钥，如
 
 ```bash
-# 对于 Anthropic Claude
-export ANTHROPIC_API_KEY=your_api_key_here
+ANTHROPIC_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# 对于 OpenAI/DeepSeek
-export OPENAI_API_KEY=your_api_key_here
+# DeepSeek 模型（OpenAI 兼容接口）
+# 使用: --model openai/deepseek-v3.2-exp
+# 价格: ¥0.0008/1K input, ¥0.0012/1K output (约 $0.114/1M input, $0.171/1M output)
+OPENAI_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+OPENAI_API_BASE=https://api.modelarts-maas.com/v1
+
+# 模型价格注册文件（使用项目本地路径）
+LITELLM_MODEL_REGISTRY_PATH=config/local/model_registry.json
+
+# 全局配置目录（使用项目本地）
+MSWEA_GLOBAL_CONFIG_DIR=config/local
 ```
 
 ## 使用方法
