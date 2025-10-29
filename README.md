@@ -5,6 +5,7 @@
 ```bash
 git clone https://github.com/tripmasterwang/Openharmony_codecheck.git
 cd Openharmony_codecheck
+conda create -n harmonycheck python=3.11 -y
 pip install -e .
 ```
 
@@ -22,6 +23,22 @@ export OPENAI_API_KEY=your_api_key_here
 
 ## 使用方法
 
+### 0. 安装测试案例
+
+为了测试本项目的效果，以OpenHarmony/vendor_telink为案例
+
+'''bash
+cd dataset1/openharmony/test
+git clone https://gitee.com/openharmony/vendor_telink.git
+cd ../../../
+'''bash
+
+然后把为您准备的issue文件放入vendor_telink项目中。注意，此issue文件是openharmony数字协作平台直接导出的
+
+'''bash
+
+'''
+
 ### 1. 修复单个Issue（openharmony-single）
 
 修复指定项目中的单个issue：
@@ -30,7 +47,7 @@ export OPENAI_API_KEY=your_api_key_here
 mini-extra openharmony-single \
     --subset dataset1 \
     --split test \
-    --model anthropic/claude-sonnet-4-5-20250929 \
+    --model openai/deepseek-v3.2-exp \
     -i openharmony__vendor_telink-0
 ```
 
@@ -44,7 +61,7 @@ mini-extra openharmony-single \
 mini-extra openharmony-batch \
     --subset dataset1 \
     --split test \
-    --model anthropic/claude-sonnet-4-5-20250929 \
+    --model openai/deepseek-v3.2-exp \
     -i openharmony__vendor_telink-0:10
 ```
 
