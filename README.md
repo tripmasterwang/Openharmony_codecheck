@@ -6,6 +6,7 @@
 git clone https://github.com/tripmasterwang/Openharmony_codecheck.git
 cd Openharmony_codecheck
 conda create -n harmonycheck python=3.11 -y
+conda activate harmonycheck
 pip install -e '.[full]'
 ```
 
