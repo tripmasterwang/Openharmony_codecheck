@@ -160,9 +160,10 @@ def prepare_working_directory(
     else:
         dir_name = f"{timestamp}_{mode}"
     
-    # Create output directory structure
+    # Create output directory structure with project name subdirectory
     output_base = Path(base_output_dir)
-    output_project_path = output_base / dir_name
+    project_name = instance["project_name"]
+    output_project_path = output_base / project_name / dir_name
     
     # Copy project if not already exists
     if not output_project_path.exists():
@@ -267,6 +268,7 @@ def main(
         exit_status, result = type(e).__name__, str(e)
         extra_info = {"traceback": traceback.format_exc()}
     finally:
+        # Save trajectory to specified output path
         save_traj(
             agent,
             output,
@@ -274,6 +276,17 @@ def main(
             result=result,
             extra_info=extra_info,
             instance_id=instance_spec,
+        )
+        # Also save trajectory to working directory (with fixed project)
+        working_traj_path = Path(working_path) / f"{instance_spec}.traj.json"
+        save_traj(
+            agent,
+            working_traj_path,
+            exit_status=exit_status,
+            result=result,
+            extra_info=extra_info,
+            instance_id=instance_spec,
+            print_path=False,
         )
 
 

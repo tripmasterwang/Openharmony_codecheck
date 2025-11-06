@@ -85,7 +85,7 @@ def process_instance(
     output_dir: Path,
     config: dict,
     progress_manager: RunBatchProgressManager,
-    working_path: str,
+    working_paths: dict[str, str],
 ) -> None:
     """Process a single OpenHarmony instance."""
     instance_id = instance["instance_id"]
@@ -105,7 +105,9 @@ def process_instance(
     extra_info = None
 
     try:
-        # Use local environment with shared working directory as cwd
+        # Use local environment with project-specific working directory as cwd
+        project_name = instance["project_name"]
+        working_path = working_paths[project_name]
         env_config = config.get("environment", {})
         env_config["cwd"] = working_path
         env = LocalEnvironment(**env_config)
@@ -123,6 +125,7 @@ def process_instance(
         exit_status, result = type(e).__name__, str(e)
         extra_info = {"traceback": traceback.format_exc()}
     finally:
+        # Save trajectory to output directory (for results summary)
         save_traj(
             agent,
             instance_dir / f"{instance_id}.traj.json",
@@ -131,6 +134,17 @@ def process_instance(
             extra_info=extra_info,
             instance_id=instance_id,
             print_fct=logger.info,
+        )
+        # Also save trajectory to working directory (with fixed project)
+        working_traj_path = Path(working_path) / f"{instance_id}.traj.json"
+        save_traj(
+            agent,
+            working_traj_path,
+            exit_status=exit_status,
+            result=result,
+            extra_info=extra_info,
+            instance_id=instance_id,
+            print_path=False,
         )
         update_results_file(output_dir / "results.json", instance_id, model.config.model_name, result)
         progress_manager.on_instance_end(instance_id, exit_status)
@@ -235,11 +249,16 @@ def main(
     if model_class is not None:
         config.setdefault("model", {})["model_class"] = model_class
 
-    # Prepare working directory for full processing
-    # All instances share the same working directory
-    logger.info("Preparing working directory...")
-    working_path = prepare_working_directory(all_instances[0], mode="full")
-    logger.info(f"Working directory: {working_path}")
+    # Prepare working directories for all projects
+    # Each project gets its own working directory
+    logger.info("Preparing working directories for all projects...")
+    working_paths = {}
+    for project_name in sorted(projects.keys()):
+        # Use the first instance of each project to prepare its working directory
+        project_instances = projects[project_name]
+        working_path = prepare_working_directory(project_instances[0], mode="full")
+        working_paths[project_name] = working_path
+        logger.info(f"  {project_name}: {working_path}")
 
     # Setup progress manager
     progress_manager = RunBatchProgressManager(
@@ -262,7 +281,7 @@ def main(
     with Live(progress_manager.render_group, refresh_per_second=4):
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
-                executor.submit(process_instance, instance, output_path, config, progress_manager, working_path): instance[
+                executor.submit(process_instance, instance, output_path, config, progress_manager, working_paths): instance[
                     "instance_id"
                 ]
                 for instance in all_instances

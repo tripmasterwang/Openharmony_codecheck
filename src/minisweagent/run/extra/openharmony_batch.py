@@ -124,6 +124,7 @@ def process_instance(
         exit_status, result = type(e).__name__, str(e)
         extra_info = {"traceback": traceback.format_exc()}
     finally:
+        # Save trajectory to output directory (for results summary)
         save_traj(
             agent,
             instance_dir / f"{instance_id}.traj.json",
@@ -132,6 +133,17 @@ def process_instance(
             extra_info=extra_info,
             instance_id=instance_id,
             print_fct=logger.info,
+        )
+        # Also save trajectory to working directory (with fixed project)
+        working_traj_path = Path(working_path) / f"{instance_id}.traj.json"
+        save_traj(
+            agent,
+            working_traj_path,
+            exit_status=exit_status,
+            result=result,
+            extra_info=extra_info,
+            instance_id=instance_id,
+            print_path=False,
         )
         update_results_file(output_dir / "results.json", instance_id, model.config.model_name, result)
         progress_manager.on_instance_end(instance_id, exit_status)

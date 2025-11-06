@@ -68,15 +68,16 @@ class LitellmModel:
         response = self._query(messages, **kwargs)
         try:
             cost = litellm.cost_calculator.completion_cost(response)
+            assert cost >= 0.0, f"Cost is negative: {cost}"
         except Exception as e:
-            logger.critical(
+            logger.warning(
                 f"Error calculating cost for model {self.config.model_name}: {e}. "
+                "Cost tracking will be disabled for this model. "
                 "Please check the 'Updating the model registry' section in the documentation at "
-                "https://klieret.short.gy/litellm-model-registry Still stuck? Please open a github issue for help!"
+                "https://klieret.short.gy/litellm-model-registry"
             )
-            raise
+            cost = 0.0
         self.n_calls += 1
-        assert cost >= 0.0, f"Cost is negative: {cost}"
         self.cost += cost
         GLOBAL_MODEL_STATS.add(cost)
         return {
