@@ -53,11 +53,14 @@ mv dataset1/openharmony/ISSUE_DESP.xlsx dataset1/openharmony/test/vendor_telink
 修复指定项目中的单个issue：
 
 ```bash
+# 使用 DeepSeek 官方（自动）
+mini-extra openharmony-single --model openai/deepseek-v3.2-exp -i 0
+
+# 使用第三方（显式指定）
 mini-extra openharmony-single \
-    --subset dataset1 \
-    --split test \
     --model openai/deepseek-v3.2-exp \
-    -i openharmony__vendor_telink-0
+    --model-class litellm \
+    -i 0
 ```
 
 **说明**：此命令会修复 `dataset1/openharmony/test/vendor_telink` 中的代码，自动寻找 `ISSUE_DESP.js` 文件，并尝试修复index为0的issue。
@@ -94,17 +97,63 @@ mini-extra openharmony \
 - 对于每个项目，会自动寻找 `ISSUE_DESP.js` 文件并修复其中描述的所有问题
 - 完成一个项目后，会自动进入下一个项目
 
+### 4. 在任意目录中使用 HarmoCheck（推荐）
+
+`harmocheck` 是一个独立的命令行工具，可以在任何包含 `ISSUE_DESP.js` 或 `ISSUE_DESP.xlsx` 的代码仓库目录中使用：
+
+```bash
+# 进入代码仓库目录
+cd /path/to/your/code/repo
+
+# 使用 5 个线程并行修复所有问题
+harmocheck -i ./ -o ./harmocheck_results -w 5
+
+# 使用默认模型（从环境变量读取）
+harmocheck -i ./ -o ./harmocheck_results -w 3
+
+# 指定模型
+harmocheck -i ./ -o ./harmocheck_results -w 5 -m openai/deepseek-v3.2-exp
+
+# 只修复特定问题（索引从 0 开始）
+harmocheck -i ./ -o ./harmocheck_results --issue 0
+```
+
+**说明**：
+- `-i` / `--input`: 输入目录（必须包含 `ISSUE_DESP.js` 或 `ISSUE_DESP.xlsx`）
+- `-o` / `--output`: 输出目录（修复后的代码保存位置）
+- `-w` / `--workers`: 并行工作线程数（默认 1，建议 3-5）
+- `-m` / `--model`: 指定使用的模型（可选，默认从环境变量 `MSWEA_MODEL_NAME` 读取）
+- `--issue`: 只修复指定索引的问题（可选，不指定则修复所有问题）
+
+**特点**：
+- ✅ 自动检测并转换 `ISSUE_DESP.xlsx` 为 `ISSUE_DESP.js`
+- ✅ 支持多线程并行处理，大幅提升处理速度
+- ✅ 自动排除输出目录，避免递归复制
+- ✅ 显示实时进度条，不显示详细对话内容
+- ✅ 无需用户交互，自动执行所有修复
+
 ## 参数说明
+
+### 通用参数
+
+- `--model` / `-m`: 使用的AI模型
+  - Anthropic: `anthropic/claude-sonnet-4-5-20250929`
+  - OpenAI/DeepSeek: `openai/deepseek-v3.2-exp`
+- `-w` / `--workers`: 并行worker数量（用于批量处理和 harmocheck）
+
+### openharmony-single / openharmony-batch 参数
 
 - `--subset`: 数据集子集名称（如 dataset1）
 - `--split`: 数据集分割（如 test, train）
-- `--model`: 使用的AI模型
-  - Anthropic: `anthropic/claude-sonnet-4-5-20250929`
-  - OpenAI/DeepSeek: `openai/deepseek-v3.2-exp`
-- `-i`: Issue标识符
+- `-i` / `--instance`: Issue标识符
   - 单个issue: `openharmony__vendor_telink-0`
   - 多个issues: `openharmony__vendor_telink-0:10` (从0到9)
-- `-w`: 并行worker数量（仅用于全量修复）
+
+### harmocheck 参数
+
+- `-i` / `--input`: 输入目录（包含 ISSUE_DESP.js 或 ISSUE_DESP.xlsx 的目录）
+- `-o` / `--output`: 输出目录（修复后的代码保存位置）
+- `--issue`: 只修复指定索引的问题（0-based，可选）
 
 ## 输出结果
 

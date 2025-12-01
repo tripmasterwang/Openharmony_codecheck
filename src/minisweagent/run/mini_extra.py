@@ -14,6 +14,7 @@ subcommands = [
     ("minisweagent.run.extra.openharmony", ["openharmony"], "Evaluate on OpenHarmony (all projects, all issues)"),
     ("minisweagent.run.extra.openharmony_single", ["openharmony-single"], "Evaluate on OpenHarmony (single instance)"),
     ("minisweagent.run.extra.openharmony_batch", ["openharmony-batch"], "Evaluate on OpenHarmony (batch mode)"),
+    ("minisweagent.run.extra.harmocheck", ["harmocheck"], "Fix code quality issues in any directory"),
 ]
 
 
