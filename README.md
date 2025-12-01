@@ -1,34 +1,126 @@
 # Mini-SWE-Agent OpenHarmony 扩展 - 快速开始
 
-## 安装
+## 📦 安装步骤
+
+### 1. 克隆代码
 
 ```bash
 git clone https://github.com/tripmasterwang/Openharmony_codecheck.git
 cd Openharmony_codecheck
+```
+
+### 2. 创建 Python 环境
+
+```bash
+# 使用 conda（推荐）
 conda create -n harmonycheck python=3.11 -y
 conda activate harmonycheck
+
+# 或使用 venv
+python3.11 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# 或
+venv\Scripts\activate  # Windows
+```
+
+### 3. 安装项目依赖
+
+```bash
 pip install -e '.[full]'
 ```
 
-## 环境配置
+### 4. 配置 API 密钥
 
-在使用前，请确保设置了相应的API密钥：可以在.env中输入密钥，如
+**方法 1：使用系统全局配置（推荐用于 harmocheck）**
+
+这是最简单的方法，配置一次后可以在任何目录使用 `harmocheck`：
 
 ```bash
-ANTHROPIC_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXX
+# 创建配置目录
+mkdir -p ~/.config/mini-swe-agent
 
-# DeepSeek 模型（OpenAI 兼容接口）
-# 使用: --model openai/deepseek-v3.2-exp
-# 价格: ¥0.0008/1K input, ¥0.0012/1K output (约 $0.114/1M input, $0.171/1M output)
-OPENAI_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# 复制模型注册文件
+cp config/local/model_registry.json ~/.config/mini-swe-agent/
+
+# 创建 .env 文件（替换 YOUR_PROJECT_PATH 为实际项目路径）
+cat > ~/.config/mini-swe-agent/.env << EOF
+# Anthropic Claude 模型（可选）
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
+
+# DeepSeek 模型（OpenAI 兼容接口，推荐）
+OPENAI_API_KEY=your-openai-api-key-here
 OPENAI_API_BASE=https://api.modelarts-maas.com/v1
 
-# 模型价格注册文件（使用项目本地路径）
-LITELLM_MODEL_REGISTRY_PATH=config/local/model_registry.json
+# 模型价格注册文件（使用绝对路径）
+LITELLM_MODEL_REGISTRY_PATH=$HOME/.config/mini-swe-agent/model_registry.json
 
-# 全局配置目录（使用项目本地）
-MSWEA_GLOBAL_CONFIG_DIR=config/local
+# 全局配置目录
+MSWEA_GLOBAL_CONFIG_DIR=$HOME/.config/mini-swe-agent
+
+# 默认模型（可选，设置后无需每次指定 -m 参数）
+MSWEA_MODEL_NAME=openai/deepseek-v3.2-exp
+EOF
+
+# 编辑文件，填入你的真实 API 密钥
+nano ~/.config/mini-swe-agent/.env  # 或使用其他编辑器
 ```
+
+**方法 2：使用项目本地配置**
+
+适合只在项目目录中使用的情况：
+
+```bash
+# 复制配置示例文件
+cp config/local/.env.example config/local/.env
+
+# 编辑配置文件，填入你的 API 密钥
+nano config/local/.env  # 或使用其他编辑器
+```
+
+**必需的 API 密钥：**
+
+- **DeepSeek**（推荐）：需要 `OPENAI_API_KEY` 和 `OPENAI_API_BASE`
+  - 获取方式：访问 [DeepSeek 官网](https://www.deepseek.com/) 或使用华为云 ModelArts
+- **Anthropic Claude**：需要 `ANTHROPIC_API_KEY`
+  - 获取方式：访问 [Anthropic 官网](https://www.anthropic.com/)
+
+### 5. 验证安装
+
+```bash
+# 检查命令是否可用
+harmocheck --help
+
+# 应该能看到帮助信息，包括：
+# -i, --input TEXT     Directory containing code to fix...
+# -o, --output TEXT    Directory to save fixed code
+# -w, --workers INT    Number of worker threads...
+```
+
+## ✅ 完成！
+
+现在你可以使用 `harmocheck` 命令了。
+
+### 快速开始示例
+
+```bash
+# 1. 进入你的代码仓库目录（必须包含 ISSUE_DESP.js 或 ISSUE_DESP.xlsx）
+cd /path/to/your/code/repo
+
+# 2. 运行修复命令（使用 5 个线程并行处理）
+harmocheck -i ./ -o ./harmocheck_results -w 5
+
+# 3. 等待处理完成，修复后的代码会保存在 ./harmocheck_results 目录中
+```
+
+## 📋 完整安装检查清单
+
+- [ ] ✅ 已克隆代码仓库
+- [ ] ✅ 已创建并激活 Python 环境（Python 3.10+）
+- [ ] ✅ 已安装项目依赖（`pip install -e '.[full]'`）
+- [ ] ✅ 已配置 API 密钥（在 `~/.config/mini-swe-agent/.env` 或 `config/local/.env`）
+- [ ] ✅ 已复制 `model_registry.json` 到配置目录（如果使用方法1）
+- [ ] ✅ 已验证命令可用（`harmocheck --help`）
+- [ ] ✅ 已准备包含 `ISSUE_DESP.js` 或 `ISSUE_DESP.xlsx` 的代码仓库
 
 ## 使用方法
 
