@@ -166,7 +166,15 @@ def process_issue(
         env = LocalEnvironment(**env_config)
         
         # Use model from config (which may have been overridden by env var)
-        model_config = config.get("model", {})
+        model_config = config.get("model", {}).copy()
+        
+        # Ensure model registry is loaded from environment variable if not in config
+        import os
+        if "litellm_model_registry" not in model_config:
+            registry_path = os.getenv("LITELLM_MODEL_REGISTRY_PATH")
+            if registry_path:
+                model_config["litellm_model_registry"] = registry_path
+        
         agent = ProgressTrackingAgent(
             get_model(model_config.get("model_name"), model_config),
             env,
