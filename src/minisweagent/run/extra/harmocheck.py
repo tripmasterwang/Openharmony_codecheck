@@ -170,10 +170,26 @@ def process_issue(
         
         # Ensure model registry is loaded from environment variable if not in config
         import os
-        if "litellm_model_registry" not in model_config:
-            registry_path = os.getenv("LITELLM_MODEL_REGISTRY_PATH")
-            if registry_path:
-                model_config["litellm_model_registry"] = registry_path
+        # Always check environment variable at runtime (not at class definition time)
+        registry_path = os.getenv("LITELLM_MODEL_REGISTRY_PATH")
+        if registry_path:
+            # Environment variable takes precedence over config file
+            model_config["litellm_model_registry"] = registry_path
+            logger.debug(f"Using model registry from environment: {registry_path}")
+        elif "litellm_model_registry" in model_config:
+            logger.debug(f"Using model registry from config: {model_config['litellm_model_registry']}")
+        else:
+            # Try to use default global config path
+            from platformdirs import user_config_dir
+            default_registry = Path(user_config_dir("mini-swe-agent")) / "model_registry.json"
+            if default_registry.exists():
+                model_config["litellm_model_registry"] = str(default_registry)
+                logger.debug(f"Using default model registry: {default_registry}")
+            else:
+                logger.warning(
+                    f"Model registry not found. Cost tracking may be disabled. "
+                    f"Set LITELLM_MODEL_REGISTRY_PATH environment variable or add it to config."
+                )
         
         agent = ProgressTrackingAgent(
             get_model(model_config.get("model_name"), model_config),

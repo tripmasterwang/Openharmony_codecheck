@@ -35,7 +35,17 @@ class LitellmModel:
         self.cost = 0.0
         self.n_calls = 0
         if self.config.litellm_model_registry and Path(self.config.litellm_model_registry).is_file():
-            litellm.utils.register_model(json.loads(Path(self.config.litellm_model_registry).read_text()))
+            registry_path = Path(self.config.litellm_model_registry)
+            logger.info(f"Loading model registry from: {registry_path}")
+            litellm.utils.register_model(json.loads(registry_path.read_text()))
+            logger.debug(f"Model registry loaded successfully for model: {self.config.model_name}")
+        elif self.config.litellm_model_registry:
+            logger.warning(
+                f"Model registry path specified but file not found: {self.config.litellm_model_registry}. "
+                f"Cost tracking will be disabled for model: {self.config.model_name}"
+            )
+        else:
+            logger.debug(f"No model registry specified for model: {self.config.model_name}")
 
     @retry(
         stop=stop_after_attempt(10),
