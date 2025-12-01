@@ -170,23 +170,33 @@ def process_issue(
         
         # Ensure model registry is loaded from environment variable if not in config
         import os
-        # Always check environment variable at runtime (not at class definition time)
+        from platformdirs import user_config_dir
+        
+        # Always use global config path for model registry (not project-local)
+        # This ensures consistency regardless of where harmocheck is run from
+        global_config_dir = Path(user_config_dir("mini-swe-agent"))
+        global_registry = global_config_dir / "model_registry.json"
+        
+        # Check environment variable first, but if it's a relative path, use global instead
         registry_path = os.getenv("LITELLM_MODEL_REGISTRY_PATH")
         if registry_path:
-            # Environment variable takes precedence over config file
-            registry_path = Path(registry_path).resolve()
-            if registry_path.exists():
-                model_config["litellm_model_registry"] = str(registry_path)
-                logger.info(f"Using model registry from environment: {registry_path}")
+            registry_path_obj = Path(registry_path)
+            # If it's a relative path, it's probably from project-local config, use global instead
+            if registry_path_obj.is_absolute() and registry_path_obj.exists():
+                model_config["litellm_model_registry"] = str(registry_path_obj)
+                logger.info(f"Using model registry from environment: {registry_path_obj}")
             else:
-                logger.warning(f"Model registry path from environment does not exist: {registry_path}")
+                # Relative path or doesn't exist, use global config
+                if global_registry.exists():
+                    model_config["litellm_model_registry"] = str(global_registry)
+                    logger.info(f"Environment path is relative/invalid, using global registry: {global_registry}")
+                else:
+                    logger.warning(f"Model registry path from environment is invalid: {registry_path}, and global registry not found: {global_registry}")
         else:
-            # Try to use default global config path
-            from platformdirs import user_config_dir
-            default_registry = Path(user_config_dir("mini-swe-agent")) / "model_registry.json"
-            if default_registry.exists():
-                model_config["litellm_model_registry"] = str(default_registry)
-                logger.info(f"Using default model registry: {default_registry}")
+            # No environment variable, use global config path
+            if global_registry.exists():
+                model_config["litellm_model_registry"] = str(global_registry)
+                logger.info(f"Using global model registry: {global_registry}")
             elif "litellm_model_registry" in model_config:
                 # Config file has a path, but check if it's valid
                 config_registry = Path(model_config["litellm_model_registry"])
