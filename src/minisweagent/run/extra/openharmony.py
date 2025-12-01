@@ -3,8 +3,6 @@
 """Run mini-SWE-agent on all OpenHarmony projects and issues."""
 
 import concurrent.futures
-import json
-import threading
 import time
 import traceback
 from pathlib import Path
@@ -24,7 +22,7 @@ from minisweagent.run.extra.openharmony_single import (
 )
 from minisweagent.run.extra.utils.batch_progress import RunBatchProgressManager
 from minisweagent.run.utils.save import save_traj
-from minisweagent.utils.log import add_file_handler, logger
+from minisweagent.utils.log import logger
 
 _HELP_TEXT = """Run mini-SWE-agent on all OpenHarmony projects and issues.
 
@@ -35,8 +33,6 @@ This is the top-level batch processing command for OpenHarmony.
 """
 
 app = typer.Typer(rich_markup_mode="rich", add_completion=False)
-
-_OUTPUT_FILE_LOCK = threading.Lock()
 
 
 class ProgressTrackingAgent(DefaultAgent):
@@ -55,45 +51,14 @@ class ProgressTrackingAgent(DefaultAgent):
         return super().step()
 
 
-def update_results_file(output_path: Path, instance_id: str, model_name: str, result: str):
-    """Update the output JSON file with results from a single instance."""
-    with _OUTPUT_FILE_LOCK:
-        output_data = {}
-        if output_path.exists():
-            output_data = json.loads(output_path.read_text())
-        output_data[instance_id] = {
-            "model_name_or_path": model_name,
-            "instance_id": instance_id,
-            "result": result,
-        }
-        output_path.write_text(json.dumps(output_data, indent=2))
-
-
-def remove_from_results_file(output_path: Path, instance_id: str):
-    """Remove an instance from the results file."""
-    if not output_path.exists():
-        return
-    with _OUTPUT_FILE_LOCK:
-        output_data = json.loads(output_path.read_text())
-        if instance_id in output_data:
-            del output_data[instance_id]
-            output_path.write_text(json.dumps(output_data, indent=2))
-
-
 def process_instance(
     instance: dict,
-    output_dir: Path,
     config: dict,
     progress_manager: RunBatchProgressManager,
     working_paths: dict[str, str],
 ) -> None:
     """Process a single OpenHarmony instance."""
     instance_id = instance["instance_id"]
-    instance_dir = output_dir / instance_id
-    
-    # Avoid inconsistent state if something fails
-    remove_from_results_file(output_dir / "results.json", instance_id)
-    (instance_dir / f"{instance_id}.traj.json").unlink(missing_ok=True)
     
     model = get_model(config=config.get("model", {}))
     task = format_openharmony_issue(instance)
@@ -125,18 +90,12 @@ def process_instance(
         exit_status, result = type(e).__name__, str(e)
         extra_info = {"traceback": traceback.format_exc()}
     finally:
-        # Save trajectory to output directory (for results summary)
-        save_traj(
-            agent,
-            instance_dir / f"{instance_id}.traj.json",
-            exit_status=exit_status,
-            result=result,
-            extra_info=extra_info,
-            instance_id=instance_id,
-            print_fct=logger.info,
-        )
-        # Also save trajectory to working directory (with fixed project)
-        working_traj_path = Path(working_path) / f"{instance_id}.traj.json"
+        # Save trajectory to working directory (with fixed project)
+        # Create a dedicated trajectory folder
+        project_prefix = instance_id.rsplit("-", 1)[0]  # Extract project prefix (e.g., "openharmony__distributedschedule_samgr")
+        traj_dir = Path(working_path) / f"{project_prefix}_traj"
+        traj_dir.mkdir(parents=True, exist_ok=True)
+        working_traj_path = traj_dir / f"{instance_id}.traj.json"
         save_traj(
             agent,
             working_traj_path,
@@ -146,7 +105,6 @@ def process_instance(
             instance_id=instance_id,
             print_path=False,
         )
-        update_results_file(output_dir / "results.json", instance_id, model.config.model_name, result)
         progress_manager.on_instance_end(instance_id, exit_status)
 
 
@@ -178,11 +136,9 @@ def discover_all_instances(subset: str, split: str) -> dict[str, list[dict]]:
 def main(
     subset: str = typer.Option("dataset1", "--subset", help="Dataset path", rich_help_panel="Data selection"),
     split: str = typer.Option("test", "--split", help="Dataset split (test/train)", rich_help_panel="Data selection"),
-    output: str = typer.Option("", "-o", "--output", help="Output directory", rich_help_panel="Basic"),
     workers: int = typer.Option(1, "-w", "--workers", help="Number of worker threads for parallel processing", rich_help_panel="Basic"),
     model: str | None = typer.Option(None, "-m", "--model", help="Model to use", rich_help_panel="Basic"),
     model_class: str | None = typer.Option(None, "--model-class", help="Model class to use", rich_help_panel="Advanced"),
-    redo_existing: bool = typer.Option(False, "--redo-existing", help="Redo existing instances", rich_help_panel="Data selection"),
     config_spec: Path = typer.Option(builtin_config_dir / "extra" / "openharmony.yaml", "-c", "--config", help="Path to a config file", rich_help_panel="Basic"),
     project_filter: str = typer.Option("", "--project", help="Filter by project name (e.g., 'vendor_telink')", rich_help_panel="Data selection"),
 ) -> None:
@@ -192,14 +148,6 @@ def main(
     This command automatically discovers all projects in the dataset directory
     and processes all issues from each project.
     """
-    
-    # Setup output directory
-    if not output:
-        output = f"openharmony_full_results_{time.strftime('%Y%m%d_%H%M%S')}"
-    output_path = Path(output)
-    output_path.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Results will be saved to {output_path}")
-    add_file_handler(output_path / "minisweagent.log")
 
     # Discover all projects and instances
     logger.info(f"Discovering projects in {subset}/{split}...")
@@ -227,11 +175,6 @@ def main(
     for project_name in sorted(projects.keys()):
         all_instances.extend(projects[project_name])
     
-    # Skip existing instances if requested
-    if not redo_existing and (output_path / "results.json").exists():
-        existing_instances = list(json.loads((output_path / "results.json").read_text()).keys())
-        logger.info(f"Skipping {len(existing_instances)} existing instances")
-        all_instances = [inst for inst in all_instances if inst["instance_id"] not in existing_instances]
     
     logger.info(f"Processing {len(all_instances)} instances...")
     
@@ -262,7 +205,7 @@ def main(
 
     # Setup progress manager
     progress_manager = RunBatchProgressManager(
-        len(all_instances), output_path / f"exit_statuses_{time.time()}.yaml"
+        len(all_instances), None
     )
 
     def process_futures(futures: dict[concurrent.futures.Future, str]):
@@ -281,7 +224,7 @@ def main(
     with Live(progress_manager.render_group, refresh_per_second=4):
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
-                executor.submit(process_instance, instance, output_path, config, progress_manager, working_paths): instance[
+                executor.submit(process_instance, instance, config, progress_manager, working_paths): instance[
                     "instance_id"
                 ]
                 for instance in all_instances
@@ -298,9 +241,6 @@ def main(
     # Summary
     logger.info("=" * 60)
     logger.info("Processing complete!")
-    logger.info(f"Results saved to: {output_path}")
-    logger.info(f"Results file: {output_path / 'results.json'}")
-    logger.info(f"Log file: {output_path / 'minisweagent.log'}")
     logger.info("=" * 60)
 
 

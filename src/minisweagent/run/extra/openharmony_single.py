@@ -1,7 +1,10 @@
 """Run on a single OpenHarmony instance."""
 
 import json
+import os
 import shutil
+import stat
+import subprocess
 import traceback
 from pathlib import Path
 
@@ -128,6 +131,32 @@ def load_openharmony_dataset(subset: str, split: str) -> dict[str, dict]:
     return instances
 
 
+def make_readonly(path: Path) -> None:
+    """Make a directory and all its contents read-only.
+    
+    Args:
+        path: Path to the directory to make read-only
+    """
+    try:
+        # Use chmod to recursively remove write permissions
+        subprocess.run(
+            ["chmod", "-R", "a-w", str(path)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        logger.debug(f"Set {path} to read-only")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Fallback to Python's os.chmod if chmod command is not available
+        for root, dirs, files in os.walk(path):
+            for d in dirs:
+                os.chmod(os.path.join(root, d), stat.S_IRUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+            for f in files:
+                os.chmod(os.path.join(root, f), stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+        os.chmod(path, stat.S_IRUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
+        logger.debug(f"Set {path} to read-only (using Python fallback)")
+
+
 def prepare_working_directory(
     instance: dict, 
     base_output_dir: str = "dataset1/openharmony/test_result",
@@ -135,6 +164,11 @@ def prepare_working_directory(
     instance_range: str = ""
 ) -> str:
     """Copy project to working directory with timestamped naming.
+    
+    This function:
+    1. Ensures the source directory is read-only to prevent accidental modifications
+    2. Copies the project to the test_result directory
+    3. Returns the path to the working directory where modifications will occur
     
     Args:
         instance: Instance dictionary
@@ -149,6 +183,20 @@ def prepare_working_directory(
     
     source_path = Path(instance["project_path"])
     timestamp = time.strftime("%Y%m%d_%H%M%S")
+    
+    # Ensure source directory is read-only to prevent accidental modifications
+    if source_path.exists():
+        # Check if already read-only by testing write permission
+        test_file = source_path / ".write_test"
+        try:
+            test_file.touch()
+            test_file.unlink()
+            # If we can write, make it read-only
+            make_readonly(source_path)
+            logger.info(f"Set source directory to read-only: {source_path}")
+        except (PermissionError, OSError):
+            # Already read-only or permission denied, which is fine
+            logger.debug(f"Source directory appears to be read-only: {source_path}")
     
     # Generate directory name based on mode
     if mode == "single":
@@ -195,8 +243,10 @@ Problem Location:
 Line {instance['line_number']}: {instance['code_content']}
 
 Task:
-Please fix this code quality issue by modifying the file at:
-{instance['project_path']}/{instance['issue_file']}
+Please fix this code quality issue by modifying the file:
+{instance['issue_file']}
+
+Note: The file path is relative to the current working directory. Do not use absolute paths.
 
 Make sure your fix complies with the coding standard rule mentioned above.
 Focus on STATIC ANALYSIS - read and understand the code, then make the necessary changes.
@@ -268,17 +318,12 @@ def main(
         exit_status, result = type(e).__name__, str(e)
         extra_info = {"traceback": traceback.format_exc()}
     finally:
-        # Save trajectory to specified output path
-        save_traj(
-            agent,
-            output,
-            exit_status=exit_status,
-            result=result,
-            extra_info=extra_info,
-            instance_id=instance_spec,
-        )
-        # Also save trajectory to working directory (with fixed project)
-        working_traj_path = Path(working_path) / f"{instance_spec}.traj.json"
+        # Save trajectory to working directory (with fixed project)
+        # Create a dedicated trajectory folder
+        project_prefix = instance_spec.rsplit("-", 1)[0]  # Extract project prefix (e.g., "openharmony__distributedschedule_samgr")
+        traj_dir = Path(working_path) / f"{project_prefix}_traj"
+        traj_dir.mkdir(parents=True, exist_ok=True)
+        working_traj_path = traj_dir / f"{instance_spec}.traj.json"
         save_traj(
             agent,
             working_traj_path,

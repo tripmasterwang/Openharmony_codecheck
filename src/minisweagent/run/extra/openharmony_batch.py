@@ -90,11 +90,9 @@ def process_instance(
 ) -> None:
     """Process a single OpenHarmony instance."""
     instance_id = instance["instance_id"]
-    instance_dir = output_dir / instance_id
     
     # Avoid inconsistent state if something fails
     remove_from_results_file(output_dir / "results.json", instance_id)
-    (instance_dir / f"{instance_id}.traj.json").unlink(missing_ok=True)
     
     model = get_model(config=config.get("model", {}))
     task = format_openharmony_issue(instance)
@@ -124,18 +122,12 @@ def process_instance(
         exit_status, result = type(e).__name__, str(e)
         extra_info = {"traceback": traceback.format_exc()}
     finally:
-        # Save trajectory to output directory (for results summary)
-        save_traj(
-            agent,
-            instance_dir / f"{instance_id}.traj.json",
-            exit_status=exit_status,
-            result=result,
-            extra_info=extra_info,
-            instance_id=instance_id,
-            print_fct=logger.info,
-        )
-        # Also save trajectory to working directory (with fixed project)
-        working_traj_path = Path(working_path) / f"{instance_id}.traj.json"
+        # Save trajectory to working directory (with fixed project)
+        # Create a dedicated trajectory folder
+        project_prefix = instance_id.rsplit("-", 1)[0]  # Extract project prefix (e.g., "openharmony__distributedschedule_samgr")
+        traj_dir = Path(working_path) / f"{project_prefix}_traj"
+        traj_dir.mkdir(parents=True, exist_ok=True)
+        working_traj_path = traj_dir / f"{instance_id}.traj.json"
         save_traj(
             agent,
             working_traj_path,
