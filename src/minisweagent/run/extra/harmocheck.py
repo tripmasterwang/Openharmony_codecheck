@@ -174,21 +174,45 @@ def process_issue(
         registry_path = os.getenv("LITELLM_MODEL_REGISTRY_PATH")
         if registry_path:
             # Environment variable takes precedence over config file
-            model_config["litellm_model_registry"] = registry_path
-            logger.debug(f"Using model registry from environment: {registry_path}")
-        elif "litellm_model_registry" in model_config:
-            logger.debug(f"Using model registry from config: {model_config['litellm_model_registry']}")
+            registry_path = Path(registry_path).resolve()
+            if registry_path.exists():
+                model_config["litellm_model_registry"] = str(registry_path)
+                logger.info(f"Using model registry from environment: {registry_path}")
+            else:
+                logger.warning(f"Model registry path from environment does not exist: {registry_path}")
         else:
             # Try to use default global config path
             from platformdirs import user_config_dir
             default_registry = Path(user_config_dir("mini-swe-agent")) / "model_registry.json"
             if default_registry.exists():
                 model_config["litellm_model_registry"] = str(default_registry)
-                logger.debug(f"Using default model registry: {default_registry}")
+                logger.info(f"Using default model registry: {default_registry}")
+            elif "litellm_model_registry" in model_config:
+                # Config file has a path, but check if it's valid
+                config_registry = Path(model_config["litellm_model_registry"])
+                if config_registry.is_absolute() and config_registry.exists():
+                    logger.info(f"Using model registry from config: {config_registry}")
+                else:
+                    # Relative path or doesn't exist, ignore it and use default
+                    logger.warning(
+                        f"Model registry path from config is invalid or not found: {config_registry}. "
+                        f"Trying default path..."
+                    )
+                    # Remove invalid path and try default
+                    del model_config["litellm_model_registry"]
+                    default_registry = Path(user_config_dir("mini-swe-agent")) / "model_registry.json"
+                    if default_registry.exists():
+                        model_config["litellm_model_registry"] = str(default_registry)
+                        logger.info(f"Using default model registry: {default_registry}")
+                    else:
+                        logger.warning(
+                            f"Model registry not found. Cost tracking will be disabled. "
+                            f"Set LITELLM_MODEL_REGISTRY_PATH environment variable to: {default_registry}"
+                        )
             else:
                 logger.warning(
-                    f"Model registry not found. Cost tracking may be disabled. "
-                    f"Set LITELLM_MODEL_REGISTRY_PATH environment variable or add it to config."
+                    f"Model registry not found. Cost tracking will be disabled. "
+                    f"Set LITELLM_MODEL_REGISTRY_PATH environment variable to: {default_registry}"
                 )
         
         agent = ProgressTrackingAgent(
