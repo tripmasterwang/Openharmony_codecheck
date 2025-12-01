@@ -86,7 +86,9 @@ nano config/local/.env  # 或使用其他编辑器
 
 **⚠️ 重要提示：**
 
-如果遇到 `Request not allowed` 错误，说明系统正在尝试使用 Anthropic API，但你的 API key 可能无效或没有权限。解决方法：
+**问题 1：`Request not allowed` 错误**
+
+如果遇到此错误，说明系统正在尝试使用 Anthropic API，但你的 API key 可能无效或没有权限。解决方法：
 
 1. **设置默认模型**（推荐）：在 `.env` 文件中添加：
    ```bash
@@ -97,6 +99,25 @@ nano config/local/.env  # 或使用其他编辑器
    ```bash
    harmocheck -i ./ -o ./output -m openai/deepseek-v3.2-exp -w 5
    ```
+
+**问题 2：模型成本追踪警告**
+
+如果看到 `Error calculating cost for model...` 警告，说明模型注册表未正确加载。解决方法：
+
+在 `.env` 文件中添加模型注册表路径：
+```bash
+# 使用系统全局配置时
+LITELLM_MODEL_REGISTRY_PATH=$HOME/.config/mini-swe-agent/model_registry.json
+
+# 或使用项目本地配置时
+LITELLM_MODEL_REGISTRY_PATH=/path/to/mini-swe-agent/config/local/model_registry.json
+```
+
+**注意**：确保已复制 `model_registry.json` 文件到配置目录：
+```bash
+# 如果使用系统全局配置
+cp config/local/model_registry.json ~/.config/mini-swe-agent/
+```
 
 ### 5. 验证安装
 
