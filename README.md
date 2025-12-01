@@ -84,6 +84,20 @@ nano config/local/.env  # 或使用其他编辑器
 - **Anthropic Claude**：需要 `ANTHROPIC_API_KEY`
   - 获取方式：访问 [Anthropic 官网](https://www.anthropic.com/)
 
+**⚠️ 重要提示：**
+
+如果遇到 `Request not allowed` 错误，说明系统正在尝试使用 Anthropic API，但你的 API key 可能无效或没有权限。解决方法：
+
+1. **设置默认模型**（推荐）：在 `.env` 文件中添加：
+   ```bash
+   MSWEA_MODEL_NAME=openai/deepseek-v3.2-exp
+   ```
+
+2. **或在命令行指定模型**：
+   ```bash
+   harmocheck -i ./ -o ./output -m openai/deepseek-v3.2-exp -w 5
+   ```
+
 ### 5. 验证安装
 
 ```bash

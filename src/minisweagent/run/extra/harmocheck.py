@@ -271,6 +271,17 @@ def main(
         if env_model:
             config.setdefault("model", {})["model_name"] = env_model
             logger.info(f"Using model from environment variable: {env_model}")
+        else:
+            # Warn user if using config default (which might be Anthropic)
+            default_model = config.get("model", {}).get("model_name", "unknown")
+            if "anthropic" in default_model.lower() or "claude" in default_model.lower():
+                logger.warning(
+                    f"⚠️  No model specified and MSWEA_MODEL_NAME not set. "
+                    f"Using config default: {default_model}\n"
+                    f"   If you encounter API errors, please either:\n"
+                    f"   1. Set MSWEA_MODEL_NAME in ~/.config/mini-swe-agent/.env\n"
+                    f"   2. Or use -m flag: harmocheck -i ./ -o ./output -m openai/deepseek-v3.2-exp"
+                )
     elif model_name:
         # Explicitly specified model takes precedence
         config.setdefault("model", {})["model_name"] = model_name
