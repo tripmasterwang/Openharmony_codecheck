@@ -4,6 +4,7 @@ import concurrent.futures
 import json
 import logging
 import shutil
+import stat
 import time
 import traceback
 from pathlib import Path
@@ -242,6 +243,13 @@ def process_issue(
     finally:
         # Save trajectory to working directory
         traj_dir = working_path / "harmocheck_traj"
+        # Ensure parent directory is writable before creating subdirectory
+        working_path_obj = Path(working_path)
+        if working_path_obj.exists():
+            # Add write permission to parent directory if needed
+            current_mode = working_path_obj.stat().st_mode
+            if not (current_mode & stat.S_IWRITE):
+                working_path_obj.chmod(current_mode | stat.S_IWRITE | stat.S_IWGRP)
         traj_dir.mkdir(parents=True, exist_ok=True)
         traj_path = traj_dir / f"{instance_id}.traj.json"
         save_traj(

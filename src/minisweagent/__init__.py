@@ -22,28 +22,21 @@ from minisweagent.utils.log import logger
 
 package_dir = Path(__file__).resolve().parent
 
-# Check for local config first (project-level), then fall back to global config
-local_config_dir = Path.cwd() / "config" / "local"
-local_config_file = local_config_dir / ".env"
-
+# Use system global config only
 if os.getenv("MSWEA_GLOBAL_CONFIG_DIR"):
     # Explicitly set via environment variable
     global_config_dir = Path(os.getenv("MSWEA_GLOBAL_CONFIG_DIR"))
-elif local_config_file.exists():
-    # Use project-local config if it exists
-    global_config_dir = local_config_dir
 else:
-    # Fall back to system global config
+    # Use system global config
     global_config_dir = Path(user_config_dir("mini-swe-agent"))
 
 global_config_dir.mkdir(parents=True, exist_ok=True)
 global_config_file = Path(global_config_dir) / ".env"
 
 if not os.getenv("MSWEA_SILENT_STARTUP"):
-    config_type = "project-local" if global_config_dir == local_config_dir else "system-global"
     Console().print(
         f"👋 This is [bold green]mini-swe-agent[/bold green] version [bold green]{__version__}[/bold green].\n"
-        f"Loading [yellow]{config_type}[/yellow] config from [bold green]'{global_config_file}'[/bold green]"
+        f"Loading [yellow]system-global[/yellow] config from [bold green]'{global_config_file}'[/bold green]"
     )
 dotenv.load_dotenv(dotenv_path=global_config_file)
 

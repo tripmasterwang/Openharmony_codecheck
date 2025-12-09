@@ -3,8 +3,6 @@
 import json
 import os
 import shutil
-import stat
-import subprocess
 import traceback
 from pathlib import Path
 
@@ -131,32 +129,6 @@ def load_openharmony_dataset(subset: str, split: str) -> dict[str, dict]:
     return instances
 
 
-def make_readonly(path: Path) -> None:
-    """Make a directory and all its contents read-only.
-    
-    Args:
-        path: Path to the directory to make read-only
-    """
-    try:
-        # Use chmod to recursively remove write permissions
-        subprocess.run(
-            ["chmod", "-R", "a-w", str(path)],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        logger.debug(f"Set {path} to read-only")
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # Fallback to Python's os.chmod if chmod command is not available
-        for root, dirs, files in os.walk(path):
-            for d in dirs:
-                os.chmod(os.path.join(root, d), stat.S_IRUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
-            for f in files:
-                os.chmod(os.path.join(root, f), stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-        os.chmod(path, stat.S_IRUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
-        logger.debug(f"Set {path} to read-only (using Python fallback)")
-
-
 def prepare_working_directory(
     instance: dict, 
     base_output_dir: str = "dataset1/openharmony/test_result",
@@ -166,9 +138,8 @@ def prepare_working_directory(
     """Copy project to working directory with timestamped naming.
     
     This function:
-    1. Ensures the source directory is read-only to prevent accidental modifications
-    2. Copies the project to the test_result directory
-    3. Returns the path to the working directory where modifications will occur
+    1. Copies the project to the test_result directory
+    2. Returns the path to the working directory where modifications will occur
     
     Args:
         instance: Instance dictionary
@@ -183,20 +154,6 @@ def prepare_working_directory(
     
     source_path = Path(instance["project_path"])
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    
-    # Ensure source directory is read-only to prevent accidental modifications
-    if source_path.exists():
-        # Check if already read-only by testing write permission
-        test_file = source_path / ".write_test"
-        try:
-            test_file.touch()
-            test_file.unlink()
-            # If we can write, make it read-only
-            make_readonly(source_path)
-            logger.info(f"Set source directory to read-only: {source_path}")
-        except (PermissionError, OSError):
-            # Already read-only or permission denied, which is fine
-            logger.debug(f"Source directory appears to be read-only: {source_path}")
     
     # Generate directory name based on mode
     if mode == "single":

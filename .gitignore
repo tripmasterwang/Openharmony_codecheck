@@ -204,3 +204,8 @@ batch_test_*/
 # 轨迹文件
 *.traj.json
 
+
+# HarmoCheck 结果目录
+harmocheck_results/
+dataset1/openharmony/test/harmocheck_results/
+dataset1/openharmony/test/vendor_telink/
