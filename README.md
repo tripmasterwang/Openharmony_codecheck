@@ -6,7 +6,7 @@
 
 ```bash
 git clone https://github.com/tripmasterwang/harmocheck.git
-cd Openharmony_codecheck
+cd harmocheck
 ```
 
 ### 2. 创建 Python 环境
