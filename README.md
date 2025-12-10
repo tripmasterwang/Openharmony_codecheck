@@ -5,7 +5,7 @@
 ### 1. 克隆代码
 
 ```bash
-git clone https://github.com/tripmasterwang/Openharmony_codecheck.git
+https://github.com/tripmasterwang/harmocheck.git
 cd Openharmony_codecheck
 ```
 
