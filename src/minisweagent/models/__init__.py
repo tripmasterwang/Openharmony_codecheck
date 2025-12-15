@@ -5,38 +5,26 @@ You can ignore this file completely if you explicitly set your model in your run
 import copy
 import importlib
 import os
-import threading
-
 from minisweagent import Model
+from minisweagent.models.model_config_loader import load_model_config
 
 
 class GlobalModelStats:
-    """Global model statistics tracker with optional limits."""
+    """Minimal tracker for call counts (cost tracking removed)."""
 
     def __init__(self):
-        self._cost = 0.0
         self._n_calls = 0
-        self._lock = threading.Lock()
-        self.cost_limit = float(os.getenv("MSWEA_GLOBAL_COST_LIMIT", "0"))
-        self.call_limit = int(os.getenv("MSWEA_GLOBAL_CALL_LIMIT", "0"))
-        if (self.cost_limit > 0 or self.call_limit > 0) and not os.getenv("MSWEA_SILENT_STARTUP"):
-            print(f"Global cost/call limit: ${self.cost_limit:.4f} / {self.call_limit}")
 
-    def add(self, cost: float) -> None:
-        """Add a model call with its cost, checking limits."""
-        with self._lock:
-            self._cost += cost
-            self._n_calls += 1
-        if 0 < self.cost_limit < self._cost or 0 < self.call_limit < self._n_calls + 1:
-            raise RuntimeError(f"Global cost/call limit exceeded: ${self._cost:.4f} / {self._n_calls + 1}")
-
-    @property
-    def cost(self) -> float:
-        return self._cost
+    def add(self, count: float = 0.0) -> None:
+        self._n_calls += 1
 
     @property
     def n_calls(self) -> int:
         return self._n_calls
+
+    @property
+    def cost(self) -> float:
+        return 0.0
 
 
 GLOBAL_MODEL_STATS = GlobalModelStats()
@@ -50,10 +38,23 @@ def get_model(input_model_name: str | None = None, config: dict | None = None) -
     config = copy.deepcopy(config)
     config["model_name"] = resolved_model_name
 
-    model_class = get_model_class(resolved_model_name, config.pop("model_class", ""))
+    # Default to openai_compatible if not specified
+    model_class_name = config.pop("model_class", "") or "openai_compatible"
 
-    if (from_env := os.getenv("MSWEA_MODEL_API_KEY")) and not str(type(model_class)).endswith("DeterministicModel"):
-        config.setdefault("model_kwargs", {})["api_key"] = from_env
+    # Load model config from models.yaml when using openai_compatible
+    if model_class_name == "openai_compatible":
+        loaded = load_model_config(resolved_model_name)
+        merged_kwargs = loaded.get("model_kwargs", {}) | config.get("model_kwargs", {})
+        config.update(
+            {
+                "model_name": loaded["model_name"],
+                "api_base": loaded["api_base"],
+                "api_key": loaded.get("api_key"),
+                "model_kwargs": merged_kwargs,
+            }
+        )
+
+    model_class = get_model_class(resolved_model_name, model_class_name)
 
     if (
         any(s in resolved_model_name.lower() for s in ["anthropic", "sonnet", "opus", "claude"])
@@ -79,10 +80,7 @@ def get_model_name(input_model_name: str | None = None, config: dict | None = No
 
 
 _MODEL_CLASS_MAPPING = {
-    "anthropic": "minisweagent.models.anthropic.AnthropicModel",
-    "litellm": "minisweagent.models.litellm_model.LitellmModel",
-    "openrouter": "minisweagent.models.openrouter_model.OpenRouterModel",
-    "portkey": "minisweagent.models.portkey_model.PortkeyModel",
+    "openai_compatible": "minisweagent.models.openai_compatible_model.OpenAICompatibleModel",
     "deterministic": "minisweagent.models.test_models.DeterministicModel",
 }
 
@@ -105,7 +103,7 @@ def get_model_class(model_name: str, model_class: str = "") -> type:
             msg = f"Unknown model class: {model_class} (resolved to {full_path}, available: {_MODEL_CLASS_MAPPING})"
             raise ValueError(msg)
 
-    # Default to LitellmModel
-    from minisweagent.models.litellm_model import LitellmModel
+    # Default to OpenAICompatibleModel
+    from minisweagent.models.openai_compatible_model import OpenAICompatibleModel
 
-    return LitellmModel
+    return OpenAICompatibleModel

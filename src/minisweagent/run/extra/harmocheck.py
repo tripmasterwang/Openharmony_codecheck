@@ -153,7 +153,7 @@ class ProgressTrackingAgent(DefaultAgent):
     def step(self) -> dict:
         """Override step to provide progress updates."""
         self.progress_manager.update_instance_status(
-            self.instance_id, f"Step {self.model.n_calls + 1:3d} (${self.model.cost:.2f})"
+            self.instance_id, f"Step {self.model.n_calls + 1:3d}"
         )
         return super().step()
 
@@ -163,6 +163,7 @@ def process_issue(
     config: dict,
     progress_manager: RunBatchProgressManager,
     working_path: Path,
+    traj_subdir: Path,
 ) -> None:
     """Process a single issue."""
     instance_id = instance["instance_id"]
@@ -182,63 +183,6 @@ def process_issue(
         # Use model from config (which may have been overridden by env var)
         model_config = config.get("model", {}).copy()
         
-        # Ensure model registry is loaded from environment variable if not in config
-        import os
-        from platformdirs import user_config_dir
-        
-        # Always use global config path for model registry (not project-local)
-        # This ensures consistency regardless of where harmocheck is run from
-        global_config_dir = Path(user_config_dir("mini-swe-agent"))
-        global_registry = global_config_dir / "model_registry.json"
-        
-        # Check environment variable first, but if it's a relative path, use global instead
-        registry_path = os.getenv("LITELLM_MODEL_REGISTRY_PATH")
-        if registry_path:
-            registry_path_obj = Path(registry_path)
-            # If it's a relative path, it's probably from project-local config, use global instead
-            if registry_path_obj.is_absolute() and registry_path_obj.exists():
-                model_config["litellm_model_registry"] = str(registry_path_obj)
-                logger.info(f"Using model registry from environment: {registry_path_obj}")
-            else:
-                # Relative path or doesn't exist, use global config
-                if global_registry.exists():
-                    model_config["litellm_model_registry"] = str(global_registry)
-                    logger.info(f"Environment path is relative/invalid, using global registry: {global_registry}")
-                else:
-                    logger.warning(f"Model registry path from environment is invalid: {registry_path}, and global registry not found: {global_registry}")
-        else:
-            # No environment variable, use global config path
-            if global_registry.exists():
-                model_config["litellm_model_registry"] = str(global_registry)
-                logger.info(f"Using global model registry: {global_registry}")
-            elif "litellm_model_registry" in model_config:
-                # Config file has a path, but check if it's valid
-                config_registry = Path(model_config["litellm_model_registry"])
-                if config_registry.is_absolute() and config_registry.exists():
-                    logger.info(f"Using model registry from config: {config_registry}")
-                else:
-                    # Relative path or doesn't exist, ignore it and use default
-                    logger.warning(
-                        f"Model registry path from config is invalid or not found: {config_registry}. "
-                        f"Trying default path..."
-                    )
-                    # Remove invalid path and try default
-                    del model_config["litellm_model_registry"]
-                    default_registry = Path(user_config_dir("mini-swe-agent")) / "model_registry.json"
-                    if default_registry.exists():
-                        model_config["litellm_model_registry"] = str(default_registry)
-                        logger.info(f"Using default model registry: {default_registry}")
-                    else:
-                        logger.warning(
-                            f"Model registry not found. Cost tracking will be disabled. "
-                            f"Set LITELLM_MODEL_REGISTRY_PATH environment variable to: {default_registry}"
-                        )
-            else:
-                logger.warning(
-                    f"Model registry not found. Cost tracking will be disabled. "
-                    f"Set LITELLM_MODEL_REGISTRY_PATH environment variable to: {default_registry}"
-                )
-        
         agent = ProgressTrackingAgent(
             get_model(model_config.get("model_name"), model_config),
             env,
@@ -254,10 +198,8 @@ def process_issue(
         exit_status, result = type(e).__name__, str(e)
         extra_info = {"traceback": traceback.format_exc()}
     finally:
-        # Save trajectory to ~/.local/share/harmocheck
-        from platformdirs import user_data_dir
-        traj_base = Path(user_data_dir("harmocheck", appauthor=False))
-        traj_dir = traj_base / "trajectories"
+        # Save trajectory to ~/.local/share/harmocheck/trajectories/{subdir}/
+        traj_dir = traj_subdir
         traj_dir.mkdir(parents=True, exist_ok=True)
         traj_path = traj_dir / f"{instance_id}.traj.json"
         save_traj(
@@ -336,6 +278,14 @@ def main(
     logger.info(f"Source directory backed up to: {backup_path}")
     logger.info(f"Working directory (will be modified in place): {input_dir}")
     
+    # Create trajectory subdirectory with timestamp
+    from platformdirs import user_data_dir
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    traj_subdir_name = f"harmocheck__{project_name}_{timestamp}"
+    traj_base = Path(user_data_dir("harmocheck", appauthor=False))
+    traj_subdir = traj_base / "trajectories" / traj_subdir_name
+    logger.info(f"Trajectories will be saved to: {traj_subdir}")
+    
     # Load config
     config_path = get_config_path(config_path)
     logger.info(f"Loading agent config from '{config_path}'")
@@ -411,7 +361,7 @@ def main(
     with Live(progress_manager.render_group, refresh_per_second=4):
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
-                executor.submit(process_issue, instance, config, progress_manager, input_dir): instance[
+                executor.submit(process_issue, instance, config, progress_manager, input_dir, traj_subdir): instance[
                     "instance_id"
                 ]
                 for instance in instances

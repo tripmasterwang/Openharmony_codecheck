@@ -21,7 +21,7 @@ class RouletteModel:
 
     @property
     def cost(self) -> float:
-        return sum(model.cost for model in self.models)
+        return sum(getattr(model, "cost", 0.0) for model in self.models)
 
     @property
     def n_calls(self) -> int:

@@ -47,7 +47,6 @@ def save_traj(
             "exit_status": exit_status,
             "submission": result,
             "model_stats": {
-                "instance_cost": 0.0,
                 "api_calls": 0,
             },
             "mini_version": __version__,
@@ -56,7 +55,6 @@ def save_traj(
         "trajectory_format": "mini-swe-agent-1",
     } | kwargs
     if agent is not None:
-        data["info"]["model_stats"]["instance_cost"] = agent.model.cost
         data["info"]["model_stats"]["api_calls"] = agent.model.n_calls
         data["messages"] = agent.messages
         data["info"]["config"] = {

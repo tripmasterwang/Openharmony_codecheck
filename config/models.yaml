@@ -1,0 +1,14 @@
+models:
+  deepseek-v3.2-exp:
+    api_base: "https://api.modelarts-maas.com/openai/v1"
+    api_key_env: "HUAWEI_API_KEY"
+    model_name: "deepseek-v3.2-exp"
+  deepseek-reasoner:
+    api_base: "https://api.deepseek.com/v1"
+    api_key_env: "DEEPSEEK_API_KEY"
+    model_name: "deepseek-reasoner"
+  deepseek-chat:
+    api_base: "https://api.deepseek.com/v1"
+    api_key_env: "DEEPSEEK_API_KEY"
+    model_name: "deepseek-chat"
+

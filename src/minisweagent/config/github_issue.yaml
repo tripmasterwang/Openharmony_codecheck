@@ -129,7 +129,6 @@ agent:
     ```
     </response_example>
   step_limit: 0.
-  cost_limit: 0.
 
 environment:
   image: "python:3.11"

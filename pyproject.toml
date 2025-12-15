@@ -34,7 +34,6 @@ dependencies = [
     "pyyaml",
     "requests",
     "jinja2",
-    "litellm >= 1.75.5",  # want to have gpt-5 support
     "tenacity",
     "rich",
     "python-dotenv",

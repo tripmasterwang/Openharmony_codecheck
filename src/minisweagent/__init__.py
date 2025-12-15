@@ -22,13 +22,8 @@ from minisweagent.utils.log import logger
 
 package_dir = Path(__file__).resolve().parent
 
-# Use system global config only
-if os.getenv("MSWEA_GLOBAL_CONFIG_DIR"):
-    # Explicitly set via environment variable
-    global_config_dir = Path(os.getenv("MSWEA_GLOBAL_CONFIG_DIR"))
-else:
-    # Use system global config
-    global_config_dir = Path(user_config_dir("mini-swe-agent"))
+# Use system global config
+global_config_dir = Path(user_config_dir("mini-swe-agent"))
 
 global_config_dir.mkdir(parents=True, exist_ok=True)
 global_config_file = Path(global_config_dir) / ".env"

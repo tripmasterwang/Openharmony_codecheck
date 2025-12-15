@@ -173,7 +173,6 @@ agent:
 
     If you have completed your assignment, use the submission command mentioned in the instructions.
   step_limit: 100
-  cost_limit: 2.
 
 environment:
   timeout: 30
@@ -185,10 +184,8 @@ environment:
     TQDM_DISABLE: '1'
 
 model:
-  model_name: "anthropic/claude-sonnet-4-5-20250929"
-  model_kwargs:
-    drop_params: true
-    temperature: 0.0
+  model_name: "deepseek-v3.2-exp"
+  model_class: "openai_compatible"
 
 
 

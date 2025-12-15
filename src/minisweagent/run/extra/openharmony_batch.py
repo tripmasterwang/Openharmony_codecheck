@@ -51,7 +51,7 @@ class ProgressTrackingAgent(DefaultAgent):
     def step(self) -> dict:
         """Override step to provide progress updates."""
         self.progress_manager.update_instance_status(
-            self.instance_id, f"Step {self.model.n_calls + 1:3d} (${self.model.cost:.2f})"
+            self.instance_id, f"Step {self.model.n_calls + 1:3d}"
         )
         return super().step()
 

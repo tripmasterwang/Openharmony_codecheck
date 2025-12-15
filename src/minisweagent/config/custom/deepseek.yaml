@@ -40,7 +40,6 @@ agent:
     ```
   
   step_limit: 100
-  cost_limit: 2.0
 
 environment:
   timeout: 30

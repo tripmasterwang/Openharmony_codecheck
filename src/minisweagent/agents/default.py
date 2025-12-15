@@ -26,7 +26,6 @@ class AgentConfig:
     format_error_template: str = "Please always provide EXACTLY ONE action in triple backticks."
     action_observation_template: str = "Observation: {{output}}"
     step_limit: int = 0
-    cost_limit: float = 3.0
 
 
 class NonTerminatingException(Exception):
@@ -50,7 +49,7 @@ class Submitted(TerminatingException):
 
 
 class LimitsExceeded(TerminatingException):
-    """Raised when the agent has reached its cost or step limit."""
+    """Raised when the agent has reached its step limit."""
 
 
 class DefaultAgent:
@@ -91,7 +90,7 @@ class DefaultAgent:
 
     def query(self) -> dict:
         """Query the model and return the response."""
-        if 0 < self.config.step_limit <= self.model.n_calls or 0 < self.config.cost_limit <= self.model.cost:
+        if 0 < self.config.step_limit <= self.model.n_calls:
             raise LimitsExceeded()
         response = self.model.query(self.messages)
         self.add_message("assistant", content=response["content"])
