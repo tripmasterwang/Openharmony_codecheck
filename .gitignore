@@ -209,3 +209,4 @@ batch_test_*/
 harmocheck_results/
 dataset1/openharmony/test/harmocheck_results/
 dataset1/openharmony/test/vendor_telink/
+origin/
