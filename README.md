@@ -115,7 +115,6 @@ harmocheck --help
 
 # 应该能看到帮助信息，包括：
 # -i, --input TEXT     Directory containing code to fix...
-# -o, --output TEXT    Directory to save fixed code
 # -w, --workers INT    Number of worker threads...
 ```
 
@@ -125,7 +124,8 @@ harmocheck --help
 
 ### 示例
 
-为了测试本项目的效果，以OpenHarmony/vendor_telink为案例
+为了测试本项目的效果，以OpenHarmony/vendor_telink为案例。
+此项目可以克隆在你想克隆的任何位置，本文档只是为了演示，克隆在了项目路径中。
 
 ```
 
@@ -135,14 +135,10 @@ cd ../../../
 
 ```
 
-然后把为您准备的issue文件放入vendor_telink项目中。注意，此issue文件是openharmony数字协作平台直接导出的
-
-```
-cp dataset1/openharmony/ISSUE_DESP.xlsx dataset1/openharmony/test/vendor_telink
-```
-
 运行
 
 ```
-harmocheck -i ./dataset1/openharmony/test/vendor_telink -o ./harmocheck_results -w 5 -m openai/deepseek-v3.2-exp
+harmocheck -i ./dataset1/openharmony/test/vendor_telink -d /data2/wangyuansong/project2/harmocheck/dataset1/openharmony/ISSUE_DESP.xlsx -w 5 -m openai/deepseek-v3.2-exp
 ```
+
+注意，-d参数传入的issue文件是从openharmony数字协作平台直接导出的
